@@ -28,22 +28,20 @@ import org.apache.hadoop.io.{Writable, WritableComparable}
 import org.apache.hadoop.mapreduce.{Mapper => HMapper}
 import org.apache.hadoop.hbase.mapreduce.{TableMapper => HTableMapper}
 
-trait MP[KIN, VIN, KOUT, VOUT] {
-  type ContextType
-  type MapperType
+trait MP[KIN, VIN, KOUT, VOUT] extends MapReduceConfig {
+  type ContextType = HMapper[KIN, VIN, KOUT, VOUT]#Context
+  type MapperType = (KIN, VIN) => Iterable[(KOUT, VOUT)]
+  var mapper: Option[MapperType] = None
+
   def kType: Class[_]
   def vType: Class[_]
-  def mapWith(f: MapperType)
+  def mapWith(f: MapperType) = mapper = Some(f)
 }
 
 
 abstract class Mapper[KIN, VIN, KOUT, VOUT](implicit kTypeM: Manifest[KOUT], vTypeM: Manifest[VOUT])
-  extends HMapper[KIN, VIN, KOUT, VOUT] with OutTyped[KOUT, VOUT] with MapReduceConfig with MP[KIN, VIN, KOUT, VOUT] {
+  extends HMapper[KIN, VIN, KOUT, VOUT] with MP[KIN, VIN, KOUT, VOUT] with OutTyped[KOUT, VOUT] {
 
-  type ContextType = HMapper[KIN, VIN, KOUT, VOUT]#Context
-
-	type MapperType = (KIN,VIN) => Iterable[(KOUT,VOUT)]
-	var mapper: Option[MapperType] = None
 
   def kType = kTypeM.runtimeClass.asInstanceOf[Class[KOUT]]
   def vType = vTypeM.runtimeClass.asInstanceOf[Class[VOUT]]
@@ -56,16 +54,10 @@ abstract class Mapper[KIN, VIN, KOUT, VOUT](implicit kTypeM: Manifest[KOUT], vTy
     this.configuration = Option(context.getConfiguration)
   }
 
-	def mapWith(f:MapperType) = mapper = Some(f)
-
 }
 
 abstract class TableMapper[KOUT, VOUT](implicit kTypeM: Manifest[KOUT], vTypeM: Manifest[VOUT])
-  extends HTableMapper[KOUT, VOUT] with TableOutTyped[KOUT, VOUT] with MapReduceConfig
-  with MP[ImmutableBytesWritable, Result, KOUT, VOUT] {
-  type ContextType = HMapper[ImmutableBytesWritable, Result, KOUT, VOUT]#Context
-  type MapperType = (ImmutableBytesWritable, Result) => Iterable[(KOUT, VOUT)]
-  var mapper: Option[MapperType] = None
+  extends HTableMapper[KOUT, VOUT] with MP[ImmutableBytesWritable, Result, KOUT, VOUT] with TableOutTyped[KOUT, VOUT] {
 
   def kType = kTypeM.runtimeClass.asInstanceOf[Class[WritableComparable[KOUT]]]
   def vType = vTypeM.runtimeClass.asInstanceOf[Class[Writable]]
@@ -78,7 +70,6 @@ abstract class TableMapper[KOUT, VOUT](implicit kTypeM: Manifest[KOUT], vTypeM: 
     this.configuration = Option(ctx.getConfiguration)
   }
 
-  def mapWith(f: MapperType) = mapper = Some(f)
 }
 
 
