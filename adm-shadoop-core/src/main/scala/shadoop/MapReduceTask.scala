@@ -15,7 +15,6 @@
  */
 package shadoop
 
-import java.util
 
 import org.apache.hadoop.conf._
 import org.apache.hadoop.hbase.client.{Result, Scan}
@@ -25,7 +24,7 @@ import org.apache.hadoop.io.{Text, LongWritable, Writable, WritableComparable}
 import org.apache.hadoop.mapreduce.{Mapper => HMapper}
 import org.apache.hadoop.mapreduce.{Reducer => HReducer}
 import org.apache.hadoop.mapreduce.Job
-import shadoop.typehelper.wappers.Scans
+import shadoop.wappers.Scans
 
 
 abstract class MR[KIN, VIN, KOUT, VOUT](val mapper: Option[MP[KIN, VIN, _, _]],

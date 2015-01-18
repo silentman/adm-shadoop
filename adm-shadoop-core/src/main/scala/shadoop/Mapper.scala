@@ -30,7 +30,7 @@ import org.apache.hadoop.hbase.mapreduce.{TableMapper => HTableMapper}
 
 trait MP[KIN, VIN, KOUT, VOUT] extends MapReduceConfig {
   type ContextType = HMapper[KIN, VIN, KOUT, VOUT]#Context
-  type MapperType = (KIN, VIN) => Iterable[(KOUT, VOUT)]
+  type MapperType = (KIN, VIN, ContextType) => Iterable[(KOUT, VOUT)]
   var mapper: Option[MapperType] = None
 
   def kType: Class[_]
@@ -47,7 +47,7 @@ abstract class Mapper[KIN, VIN, KOUT, VOUT](implicit kTypeM: Manifest[KOUT], vTy
   def vType = vTypeM.runtimeClass.asInstanceOf[Class[VOUT]]
 
 	override def map(k: KIN, v: VIN, context: ContextType): Unit = {
-		mapper.map(func => func(k, v).map(pair => context.write(pair._1, pair._2)))
+		mapper.map(func => func(k, v, context).map(pair => context.write(pair._1, pair._2)))
   }
 
   override def setup(context: ContextType) {
@@ -63,7 +63,7 @@ abstract class TableMapper[KOUT, VOUT](implicit kTypeM: Manifest[KOUT], vTypeM: 
   def vType = vTypeM.runtimeClass.asInstanceOf[Class[Writable]]
 
   override def map(k: ImmutableBytesWritable, v: Result, ctx: ContextType): Unit = {
-    mapper.map(func => func(k, v).map(pair => ctx.write(pair._1, pair._2)))
+    mapper.map(func => func(k, v, ctx).map(pair => ctx.write(pair._1, pair._2)))
   }
 
   override def setup(ctx: ContextType): Unit = {

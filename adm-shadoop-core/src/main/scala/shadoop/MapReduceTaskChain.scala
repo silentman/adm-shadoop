@@ -23,7 +23,12 @@ import org.apache.hadoop.conf._
 import org.apache.hadoop.fs.{FileSystem, Path}
 import java.io.StringWriter
 import org.apache.hadoop.hbase.mapreduce.{TableMapper => HTableMapper}
-import shadoop.typehelper.wappers.Scans
+import org.apache.hadoop.mapreduce.lib.input.MultipleInputs
+import org.apache.hadoop.mapreduce.lib.jobcontrol.{ControlledJob, JobControl}
+import shadoop.IO.Input
+import shadoop.wappers.Scans
+
+import scala.util.Random
 
 /**
 A class representing a bunch (one or more) of map and reduce operations, as well as
@@ -63,7 +68,6 @@ class MapReduceTaskChain[KIN, VIN, KOUT, VOUT] extends Cloneable with Logging {
   var defaultInput: IO.Input[KOUT,VOUT] = new IO.Input(tmpDir, classOf[lib.input.SequenceFileInputFormat[KOUT,VOUT]])
   var inputs: Array[IO.Input[KOUT,VOUT]] = Array()
   var output: IO.Output[KOUT,VOUT] = new IO.Output(tmpDir, classOf[lib.output.SequenceFileOutputFormat[KOUT,VOUT]])
-
 
   def cloneTypesafe(): thisType = clone().asInstanceOf[thisType]
 
@@ -128,6 +132,52 @@ class MapReduceTaskChain[KIN, VIN, KOUT, VOUT] extends Cloneable with Logging {
     return this
   }
 
+  def setupJob(): Job = {
+
+    val conf = getConf
+    // Off the bat, apply the modifications from all the ConfModifiers we have queued up at this node.
+    confModifiers map ((mod: ConfModifier) => mod(conf))
+
+    val job = task initJob conf
+
+    // Apply the modifications from all the JobModifiers we have queued up at this node.
+    jobModifiers foreach ((mod: JobModifier) => mod(job))
+
+    job setOutputFormatClass(output.outFormatClass)
+
+    if (classOf[lib.output.FileOutputFormat[KOUT, VOUT]].isAssignableFrom(output.outFormatClass)) {
+      lib.output.FileOutputFormat.setOutputPath(job, new Path(output.dirName))
+    }
+
+    if (!classOf[HTableMapper[_,_]].isAssignableFrom(task.mapper.get.getClass)) {
+      if (prev.inputs.isEmpty) {
+        job setInputFormatClass    prev.defaultInput.inFormatClass
+        if (classOf[lib.input.FileInputFormat[KIN, VIN]].isAssignableFrom(prev.defaultInput.inFormatClass)
+          || classOf[PathInputFormat[KIN, VIN]].isAssignableFrom(prev.defaultInput.inFormatClass)) {
+          info("Adding input path: " + prev.defaultInput.dirName)
+          lib.input.FileInputFormat.addInputPath(job, new Path(prev.defaultInput.dirName))
+        }
+      } else {
+//        job setInputFormatClass   prev.inputs(0).inFormatClass
+        prev.inputs.foreach ((io) => {
+          if (classOf[lib.input.FileInputFormat[KIN, VIN]].isAssignableFrom(io.inFormatClass)
+            || classOf[PathInputFormat[KIN, VIN]].isAssignableFrom(io.inFormatClass)) {
+            info("Adding input path: " + io.dirName)
+//            lib.input.FileInputFormat.addInputPath(job, new Path(io.dirName))
+            MultipleInputs.addInputPath(job, new Path(io.dirName), io.inFormatClass)
+          }
+
+        })
+      }
+    } else {
+      info("scan hbase: %s".format(Scans.toJavaList(task.asInstanceOf[TableMapReduceTask[_, _]].scans)))
+    }
+
+    debug(debugJob(job))
+    debug(debugConfig(job.getConfiguration))
+
+    job
+  }
 
   def execute(): Boolean = {
     if (prev != null) {
@@ -139,45 +189,7 @@ class MapReduceTaskChain[KIN, VIN, KOUT, VOUT] extends Cloneable with Logging {
 
       info(s"Executing task '${task.name}'...")
 
-      val conf = getConf
-      // Off the bat, apply the modifications from all the ConfModifiers we have queued up at this node.
-      confModifiers map ((mod: ConfModifier) => mod(conf))
-
-      val job = task initJob conf
-
-      // Apply the modifications from all the JobModifiers we have queued up at this node.
-      jobModifiers foreach ((mod: JobModifier) => mod(job))
-
-      job setOutputFormatClass(output.outFormatClass)
-
-      if (classOf[lib.output.FileOutputFormat[KOUT, VOUT]].isAssignableFrom(output.outFormatClass)) {
-        lib.output.FileOutputFormat.setOutputPath(job, new Path(output.dirName))
-      }
-
-      if (!classOf[HTableMapper[_,_]].isAssignableFrom(task.mapper.get.getClass)) {
-        if (prev.inputs.isEmpty) {
-          job setInputFormatClass    prev.defaultInput.inFormatClass
-          if (classOf[lib.input.FileInputFormat[KIN, VIN]].isAssignableFrom(prev.defaultInput.inFormatClass)
-            || classOf[PathInputFormat[KIN, VIN]].isAssignableFrom(prev.defaultInput.inFormatClass)) {
-            info("Adding input path: " + prev.defaultInput.dirName)
-            lib.input.FileInputFormat.addInputPath(job, new Path(prev.defaultInput.dirName))
-          }
-        } else {
-          job setInputFormatClass   prev.inputs(0).inFormatClass
-          prev.inputs.foreach ((io) => {
-            if (classOf[lib.input.FileInputFormat[KIN, VIN]].isAssignableFrom(prev.inputs(0).inFormatClass)
-              || classOf[PathInputFormat[KIN, VIN]].isAssignableFrom(prev.inputs(0).inFormatClass)) {
-              info("Adding input path: " + io.dirName)
-              lib.input.FileInputFormat.addInputPath(job, new Path(io.dirName))
-            }
-          })
-        }
-      } else {
-        info("scan hbase: %s".format(Scans.toJavaList(task.asInstanceOf[TableMapReduceTask[_, _]].scans)))
-      }
-
-      debug(debugJob(job))
-      debug(debugConfig(job.getConfiguration))
+      val job = setupJob()
 
       job waitForCompletion true
       return true

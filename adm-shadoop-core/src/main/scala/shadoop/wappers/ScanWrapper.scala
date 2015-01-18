@@ -1,4 +1,4 @@
-package shadoop.typehelper.wappers
+package shadoop.wappers
 
 
 import java.util
@@ -36,33 +36,40 @@ case class ScanWrapper(tableName: Option[String],
 }
 
 object ScanWrapper {
-  def apply(tableName: String, family: String, qualifier: String)=
-    new ScanWrapper(Option(tableName), Option(family), Option(qualifier), None, None, None, None)
+  def apply(tableName: String, family: String, qualifier: String, filter: Filter)=
+    new ScanWrapper(Option(tableName), Option(family), Option(qualifier), None, None, None, Option(filter))
 
-  implicit def boxing(tp: (String, String, String))= apply(tp._1, tp._2, tp._3)
-
-  def apply(tableName: String, family: String, qualifier: String, startRow: String, endRow: String) =
-    new ScanWrapper(Option(tableName), Option(family), Option(qualifier), Option(startRow),
-      Option(endRow), None, None)
-
-  implicit def boxing(tp: (String, String, String, String, String)) = apply(tp._1, tp._2, tp._3, tp._4, tp._5)
+  implicit def boxing(tp: (String, String, String))= apply(tp._1, tp._2, tp._3, null)
+  implicit def boxing(tp: (String, String, String, Filter))= apply(tp._1, tp._2, tp._3, tp._4)
 
   def apply(tableName: String, family: String, qualifier: String, startRow: String, endRow: String, filter: Filter) =
     new ScanWrapper(Option(tableName), Option(family), Option(qualifier), Option(startRow),
       Option(endRow), None, Option(filter))
 
+  implicit def boxing(tp: (String, String, String, String, String)) = apply(tp._1, tp._2, tp._3, tp._4, tp._5, null)
   implicit def boxing(tp: (String, String, String, String, String, Filter)) = apply(tp._1, tp._2, tp._3, tp._4, tp._5, tp._6)
+
+  def apply(tableName: String, family: String, qualifier: String, startRow: String, endRow: String, startTime: Long, endTime: Long, filter: Filter) =
+    new ScanWrapper(Option(tableName), Option(family), Option(qualifier), Option(startRow),
+      Option(endRow), Option((startTime, endTime)), Option(filter))
+
+  implicit def boxing(tp: (String, String, String, String, String, Long, Long, Filter)) =
+    apply(tp._1, tp._2, tp._3, tp._4, tp._5, tp._6, tp._7, tp._8)
+  implicit def boxing(tp: (String, String, String, String, String, Long, Long)) =
+    apply(tp._1, tp._2, tp._3, tp._4, tp._5, tp._6, tp._7, null)
 
 }
 
 sealed trait ScansNil extends ScanElem {
   def ++(scanWrapper: ScanWrapper) = Scans(scanWrapper.boxing, this)
+  def ++(scan: Scan) = Scans(scan, this)
 }
 
 case object ScansNil extends ScansNil {}
 
 case class Scans(head: Scan, tail: ScanElem) extends ScanElem {
   def ++(scanWrapper: ScanWrapper) = Scans(scanWrapper.boxing, this)
+  def ++(scan: Scan) = Scans(scan, this)
 }
 
 
@@ -86,6 +93,10 @@ object Scans {
 
   implicit def scansBoxing(tp: (String, String, String)) = apply() ++ tp
   implicit def scansBoxing(tp: (String, String, String, String, String, Filter)) = apply() ++ tp
+  implicit def scansBoxing(tp: (String, String, String, Filter)) = apply() ++ tp
+  implicit def scansBoxing(tp: (String, String, String, String, String)) = apply() ++ tp
+  implicit def scansBoxing(tp: (String, String, String, String, String, Long, Long)) = apply() ++ tp
+  implicit def scansBoxing(tp: (String, String, String, String, String, Long, Long, Filter)) = apply() ++ tp
 
   def main(array: Array[String]) = {
     import ScanWrapper._

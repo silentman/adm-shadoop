@@ -23,7 +23,7 @@ class Reducer[KIN, VIN, KOUT, VOUT](implicit kinTypeM: Manifest[KIN], vinTypeM: 
   extends HReducer[KIN, VIN, KOUT, VOUT] with OutTyped[KOUT, VOUT] with MapReduceConfig {
 
   type ContextType = HReducer[KIN, VIN, KOUT, VOUT]#Context
-	type ReducerType = (KIN,Iterable[VIN]) => Iterable[(KOUT,VOUT)]
+	type ReducerType = (KIN,Iterable[VIN], ContextType) => Iterable[(KOUT,VOUT)]
 
 	// we wrap the reducer function in an option in case someone forgets to call reduceWith, and in that
 	// case we'll return the empty iterable
@@ -41,14 +41,14 @@ class Reducer[KIN, VIN, KOUT, VOUT](implicit kinTypeM: Manifest[KIN], vinTypeM: 
 	 * Run our reduce function, collect the output and save it into the context
 	 */
 	override def reduce(k: KIN, v: java.lang.Iterable[VIN], context: ContextType): Unit = {
-    reducer.map(func => func(k, v).map(pair => context.write(pair._1, pair._2)))
+    reducer.map(func => func(k, v, context).map(pair => context.write(pair._1, pair._2)))
 	}
 
 	/**
 	 * Run our reduce function and return the raw output, may be useful during unit testing or troubleshooting
 	 */
-	def testF(k: KIN, v: java.lang.Iterable[VIN]) = {
-		reducer.map(func => func(k, v))
+	def testF(k: KIN, v: java.lang.Iterable[VIN], context: ContextType) = {
+		reducer.map(func => func(k, v, null))
 	}
 
 	/**
