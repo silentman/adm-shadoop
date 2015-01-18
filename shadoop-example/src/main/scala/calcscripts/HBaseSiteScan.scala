@@ -7,8 +7,7 @@ import org.apache.hadoop.hbase.util.Bytes
 import org.apache.hadoop.io.{LongWritable, Text}
 import shadoop._
 import shadoop.MapReduceTaskChain._
-import shadoop.typehelper.wappers.Scans._
-import shadoop.typehelper.wappers.ScanWrapper._
+import shadoop.wappers.Scans._
 
 
 /**
@@ -22,7 +21,7 @@ object HBaseSiteScan extends ScalaHadoop {
     val limit = new PageFilter(1000)
     val mapper = new TableMapper[Text, Text] {
       mapWith {
-        (k, v) =>
+        (k, v, ctx) =>
           List((
             new Text(Bytes.toString(k.get())),
             new Text(Bytes.toString(v.getValue("column_family", "admckid")))

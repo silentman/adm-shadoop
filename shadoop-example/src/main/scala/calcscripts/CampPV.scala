@@ -15,16 +15,16 @@ object CampPV extends ScalaHadoop {
   import shadoop.ImplicitConversion._
 
   val hashMapper = new Mapper[LongWritable, Text, TextTuple, LongWritable] {
-    mapWith { (k, v) =>
+    mapWith { (k, v, ctx) =>
       val content = v.split(",", -1)
       List((
-        content(22) :: content(0),
+        content(25) :: content(0),
         new LongWritable(1)))
     }
   }
 
   val hashReducer = new Reducer[TextTuple, LongWritable, TextTuple, LongWritable] {
-    reduceWith { (k, v) =>
+    reduceWith { (k, v, ctx) =>
       List((
         k,
         new LongWritable(v.foldLeft[Long](0) {(acc, elem) => acc + elem.get()})
@@ -33,7 +33,7 @@ object CampPV extends ScalaHadoop {
   }
 
   val countMapper = new Mapper[TextTuple, LongWritable, Text, LongWritable] {
-    mapWith { (k, v) =>
+    mapWith { (k, v, ctx) =>
       List((
         new Text(k.get(0)),
         v
@@ -43,21 +43,24 @@ object CampPV extends ScalaHadoop {
 
   val countReducer = new Reducer[Text, LongWritable, Text, LongWritable] {
     reduceWith {
-      (k, v) =>
+      (k, v, ctx) => {
+        ctx.getCounter("cookie", "num").increment(1)
+
         List((
           k,
-          new LongWritable(v.foldLeft[Long](0) {(acc, elem) => acc + elem.get()})
+          new LongWritable(v.foldLeft[Long](0) { (acc, elem) => acc + elem.get()})
           ))
+      }
     }
   }
 
   def run(args: Array[String]): Int = {
-    LzoTextInput[Text, LongWritable](args(0)) -->
+    Array(LzoTextInput[Text, LongWritable](args(0)), TextInput[Text, LongWritable](args(1))) -->
     MapReduceTask(hashMapper, hashReducer, hashReducer, "shadoop camp pv example: hashing") -->
     NumReduceTasks(10) -->
     MapReduceTask(countMapper, countReducer, countReducer, "shadoop camp pv example: counting") -->
     NumReduceTasks(10) -->
-    TextOutput[Text, LongWritable](args(1)) execute
+    TextOutput[Text, LongWritable](args(2)) execute
 
     0
   }

@@ -52,6 +52,7 @@
             <groupId>org.apache.hbase</groupId>
             <artifactId>hbase</artifactId>
             <version>0.94.15-cdh4.6.0</version>
+            <!--<scope>provided</scope>-->
         </dependency>
     </dependencies>
 
