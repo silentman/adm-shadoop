@@ -28,7 +28,7 @@ class ParallelTaskChains[KOUT, VOUT] extends Logging {
     if (jobControl.getFailedJobList.size() > 0) throw new RuntimeException("%s failed".format(description))
     val nextStageInputs = ArrayBuffer.empty[Input[KOUT, VOUT]]
     taskChains.foreach { tc =>
-      nextStageInputs += new Input[KOUT, VOUT](tc.output, tc.output.outFormatClass.asInstanceOf[Class[InputFormat[KOUT, VOUT]]])
+      nextStageInputs += new Input[KOUT, VOUT](tc.output.dirName, tc.output.outFormatClass.asInstanceOf[Class[InputFormat[KOUT, VOUT]]])
     }
     MapReduceTaskChain.init --> nextStageInputs.toArray
   }
