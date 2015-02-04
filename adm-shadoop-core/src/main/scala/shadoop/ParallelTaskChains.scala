@@ -1,6 +1,7 @@
 package shadoop
 
 import org.apache.hadoop.mapreduce.InputFormat
+import org.apache.hadoop.mapreduce.lib.input.SequenceFileInputFormat
 import org.apache.hadoop.mapreduce.lib.jobcontrol.{JobControl, ControlledJob}
 import shadoop.IO.Input
 
@@ -30,7 +31,7 @@ class ParallelTaskChains[KOUT, VOUT] extends Logging {
     if (jobControl.getFailedJobList.size() > 0) throw new RuntimeException("%s failed".format(description))
     val nextStageInputs = ArrayBuffer.empty[Input[KOUT, VOUT]]
     taskChains.foreach { tc =>
-      nextStageInputs += new Input[KOUT, VOUT](tc.output.dirName, tc.output.outFormatClass.asInstanceOf[Class[InputFormat[KOUT, VOUT]]])
+      nextStageInputs += new Input[KOUT, VOUT](tc.output.dirName, classOf[SequenceFileInputFormat[KOUT, VOUT]])
     }
     info(s"parrallel job successed. output: $nextStageInputs")
     MapReduceTaskChain.init --> nextStageInputs.toArray
