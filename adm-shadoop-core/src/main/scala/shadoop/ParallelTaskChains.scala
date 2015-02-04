@@ -25,12 +25,14 @@ class ParallelTaskChains[KOUT, VOUT] extends Logging {
     val jobControl = new JobControl(description)
     controlledJobs.foreach(jobControl.addJob)
     new Thread(jobControl).start()
-    while (!jobControl.allFinished()) Thread.sleep(10000)
+    while (!jobControl.allFinished())
+      Thread.sleep(10000)
     if (jobControl.getFailedJobList.size() > 0) throw new RuntimeException("%s failed".format(description))
     val nextStageInputs = ArrayBuffer.empty[Input[KOUT, VOUT]]
     taskChains.foreach { tc =>
       nextStageInputs += new Input[KOUT, VOUT](tc.output.dirName, tc.output.outFormatClass.asInstanceOf[Class[InputFormat[KOUT, VOUT]]])
     }
+    info(s"parrallel job successed. output: $nextStageInputs")
     MapReduceTaskChain.init --> nextStageInputs.toArray
   }
 
@@ -41,5 +43,5 @@ class ParallelTaskChains[KOUT, VOUT] extends Logging {
 }
 
 object ParallelTaskChains {
-  implicit def mrtcToPtc[KOUT, VOUT](mrtc: MapReduceTaskChain[_, _, KOUT, VOUT]) = new ParallelTaskChains[KOUT, VOUT] & mrtc
+  implicit def &[KOUT, VOUT](mrtc: MapReduceTaskChain[_, _, KOUT, VOUT]): ParallelTaskChains[KOUT, VOUT] = new ParallelTaskChains[KOUT, VOUT] & mrtc
 }

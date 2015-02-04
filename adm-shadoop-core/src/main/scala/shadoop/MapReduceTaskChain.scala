@@ -153,7 +153,7 @@ class MapReduceTaskChain[KIN, VIN, KOUT, VOUT] extends Cloneable with Logging {
 
     if (!classOf[HTableMapper[_,_]].isAssignableFrom(task.mapper.get.getClass)) {
       if (prev.inputs.isEmpty) {
-        job setInputFormatClass    prev.defaultInput.inFormatClass
+        job setInputFormatClass prev.defaultInput.inFormatClass
         if (classOf[lib.input.FileInputFormat[KIN, VIN]].isAssignableFrom(prev.defaultInput.inFormatClass)
           || classOf[PathInputFormat[KIN, VIN]].isAssignableFrom(prev.defaultInput.inFormatClass)) {
           info("Adding input path: " + prev.defaultInput.dirName)

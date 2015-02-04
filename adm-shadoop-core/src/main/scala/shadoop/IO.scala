@@ -22,11 +22,21 @@ import org.apache.hadoop.io.{LongWritable, Text}
 
 object IO {
 
+  sealed trait IODisc {
+    val dirName: String
+    val formatClass: Class[_]
+    override def toString: String = "%s{path: %s, format: %s}".format(this.getClass.getName, dirName, formatClass.getName)
+  }
+
   class Input[K, V](val dirName: String,
-                    val inFormatClass: java.lang.Class[_ <: InputFormat[K, V]])
+                    val inFormatClass: java.lang.Class[_ <: InputFormat[K, V]]) extends IODisc {
+    val formatClass = inFormatClass
+  }
 
   class Output[K, V](val dirName: String,
-                     val outFormatClass: java.lang.Class[_ <: lib.output.FileOutputFormat[K, V]])
+                     val outFormatClass: java.lang.Class[_ <: lib.output.FileOutputFormat[K, V]]) extends IODisc {
+    val formatClass = outFormatClass
+  }
 
   /**This is a general class for inputs and outputs into the Map Reduce jobs.  Note that it's possible to
       write one type to a file and then have it be read as something else.  */
@@ -130,6 +140,10 @@ object LzoTextInput {
   def apply[K,V](folder: String)(implicit mIn: Manifest[LzoTextInputFormat],
                                   mOut: Manifest[lib.output.TextOutputFormat[K, V]]) = {
     IO.LzoText[K,V](folder).input
+  }
+
+  def main(args: Array[String]): Unit = {
+    println(LzoTextInput[Text, Text]("test"))
   }
 }
 
