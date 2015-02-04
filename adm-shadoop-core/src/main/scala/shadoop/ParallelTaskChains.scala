@@ -8,6 +8,7 @@ import scala.collection.mutable.ArrayBuffer
 
 /**
  * Created by zhouxiaoxiang on 15/1/17.
+ * no test
  */
 class ParallelTaskChains[KOUT, VOUT] extends Logging {
   val taskChains: ArrayBuffer[MapReduceTaskChain[_, _, KOUT, VOUT]] = ArrayBuffer.empty[MapReduceTaskChain[_, _, KOUT, VOUT]]
@@ -33,7 +34,10 @@ class ParallelTaskChains[KOUT, VOUT] extends Logging {
     MapReduceTaskChain.init --> nextStageInputs.toArray
   }
 
-  def &(mrtc: MapReduceTaskChain[_, _, KOUT, VOUT]) = taskChains += mrtc
+  def &(mrtc: MapReduceTaskChain[_, _, KOUT, VOUT]): ParallelTaskChains[KOUT, VOUT] = {
+    taskChains += mrtc
+    this
+  }
 }
 
 object ParallelTaskChains {

@@ -6,6 +6,9 @@ import java.util
 import org.apache.hadoop.hbase.client.Scan
 import org.apache.hadoop.hbase.filter.Filter
 import shadoop.ImplicitConversion._
+import shadoop.Logging
+
+import scala.beans.BeanProperty
 
 
 /**
@@ -20,18 +23,32 @@ case class ScanWrapper(tableName: Option[String],
                        startRow: Option[String],
                        endRow: Option[String],
                        timeRange: Option[(Long, Long)],
-                       filter: Option[Filter]) {
-  def boxing: Scan = {
-    val scan = new Scan()
-    scan.setCaching(500)
-    family.map {f => scan.addFamily(f)}
-    qualifier.map {q => scan.addColumn(family.get, q)}
-    startRow.map(scan.setStartRow(_))
-    endRow.map(scan.setStopRow(_))
-    timeRange.map {tr => scan.setTimeRange(tr._1, tr._2)}
-    filter.map(scan.setFilter)
-    tableName.map(scan.setAttribute(Scan.SCAN_ATTRIBUTES_TABLE_NAME, _))
-    scan
+                       filter: Option[Filter]) extends Logging {
+
+  val defaultMaxCaching = 5000
+  val defaultCaching = 500
+  var ifCaching = false
+
+  @BeanProperty val scan = new Scan()
+  family.map {f => scan.addFamily(f)}
+  qualifier.map {q => scan.addColumn(family.get, q)}
+  startRow.map(scan.setStartRow(_))
+  endRow.map(scan.setStopRow(_))
+  timeRange.map {tr => scan.setTimeRange(tr._1, tr._2)}
+  filter.map(scan.setFilter)
+  tableName.map(scan.setAttribute(Scan.SCAN_ATTRIBUTES_TABLE_NAME, _))
+
+  def boxing: Scan = if (ifCaching) scan else {val cachingAdded = caching(defaultCaching); cachingAdded.boxing}
+
+  def caching(num: Int): ScanWrapper = {
+    if (num > defaultMaxCaching) {
+      info(s"set caching: $num exceeds limit: $defaultMaxCaching. use limit")
+      scan.setCaching(defaultMaxCaching)
+    } else {
+      scan.setCaching(num)
+    }
+    ifCaching = true
+    this
   }
 }
 
@@ -97,10 +114,11 @@ object Scans {
   implicit def scansBoxing(tp: (String, String, String, String, String)) = apply() ++ tp
   implicit def scansBoxing(tp: (String, String, String, String, String, Long, Long)) = apply() ++ tp
   implicit def scansBoxing(tp: (String, String, String, String, String, Long, Long, Filter)) = apply() ++ tp
+  implicit def scansBoxing(scanWrapper: ScanWrapper) = apply() ++ scanWrapper
 
   def main(array: Array[String]) = {
     import ScanWrapper._
-    println(toJavaList(("abc", "123", "456") ++ ("bcd", "456", "art")))
+    println(toJavaList((("abc", "123", "456") caching 15000) ++ ("bcd", "456", "art")))
   }
 }
 

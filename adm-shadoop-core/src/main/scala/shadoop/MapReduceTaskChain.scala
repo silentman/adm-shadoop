@@ -42,6 +42,8 @@ A class representing a bunch (one or more) of map and reduce operations, as well
   a.execute
   </pre>
  */
+
+
 class MapReduceTaskChain[KIN, VIN, KOUT, VOUT] extends Cloneable with Logging {
 
   type ConfModifier = MapReduceTaskChain.ConfModifier
