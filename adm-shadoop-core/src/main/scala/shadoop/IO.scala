@@ -19,6 +19,7 @@ import com.hadoop.mapreduce.LzoTextInputFormat
 import org.apache.hadoop.mapreduce.InputFormat
 import org.apache.hadoop.mapreduce.lib
 import org.apache.hadoop.io.{LongWritable, Text}
+import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat
 
 object IO {
 
@@ -34,7 +35,7 @@ object IO {
   }
 
   class Output[K, V](val dirName: String,
-                     val outFormatClass: java.lang.Class[_ <: lib.output.FileOutputFormat[K, V]]) extends IODisc {
+                     val outFormatClass: java.lang.Class[_ <: FileOutputFormat[K, V]]) extends IODisc {
     val formatClass = outFormatClass
   }
 
@@ -140,10 +141,6 @@ object LzoTextInput {
   def apply[K,V](folder: String)(implicit mIn: Manifest[LzoTextInputFormat],
                                   mOut: Manifest[lib.output.TextOutputFormat[K, V]]) = {
     IO.LzoText[K,V](folder).input
-  }
-
-  def main(args: Array[String]): Unit = {
-    println(LzoTextInput[Text, Text]("test"))
   }
 }
 

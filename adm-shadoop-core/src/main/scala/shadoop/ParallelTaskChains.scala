@@ -28,7 +28,10 @@ class ParallelTaskChains[KOUT, VOUT] extends Logging {
     new Thread(jobControl).start()
     while (!jobControl.allFinished())
       Thread.sleep(10000)
-    if (jobControl.getFailedJobList.size() > 0) throw new RuntimeException("%s failed".format(description))
+    if (jobControl.getFailedJobList.size() > 0) {
+      jobControl.stop()
+      throw new RuntimeException("%s failed".format(description))
+    }
     val nextStageInputs = ArrayBuffer.empty[Input[KOUT, VOUT]]
     taskChains.foreach { tc =>
       nextStageInputs += new Input[KOUT, VOUT](tc.output.dirName, classOf[SequenceFileInputFormat[KOUT, VOUT]])

@@ -50,6 +50,11 @@ case class ScanWrapper(tableName: Option[String],
     ifCaching = true
     this
   }
+
+  def batching(num: Int): ScanWrapper = {
+    scan.setBatch(num)
+    this
+  }
 }
 
 object ScanWrapper {

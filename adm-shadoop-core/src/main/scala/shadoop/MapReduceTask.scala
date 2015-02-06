@@ -17,14 +17,18 @@ package shadoop
 
 
 import org.apache.hadoop.conf._
+import org.apache.hadoop.fs.Path
 import org.apache.hadoop.hbase.client.{Result, Scan}
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable
 import org.apache.hadoop.hbase.mapreduce.{TableMapper => HTableMapper, AdmasterTableMapReduceUtil, TableMapReduceUtil}
 import org.apache.hadoop.io.{Text, LongWritable, Writable, WritableComparable}
+import org.apache.hadoop.mapreduce.lib.input.MultipleInputs
 import org.apache.hadoop.mapreduce.{Mapper => HMapper}
 import org.apache.hadoop.mapreduce.{Reducer => HReducer}
 import org.apache.hadoop.mapreduce.Job
 import shadoop.wappers.Scans
+
+import scala.collection.mutable.ArrayBuffer
 
 
 abstract class MR[KIN, VIN, KOUT, VOUT](val mapper: Option[MP[KIN, VIN, _, _]],
@@ -81,6 +85,7 @@ case class MapReduceTask[KIN, VIN, KOUT, VOUT](override val mapper: Option[MP[KI
     job
   }
 }
+
 
 object MapReduceTask {
 
